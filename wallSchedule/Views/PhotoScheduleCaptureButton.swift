@@ -36,14 +36,13 @@ struct PhotoScheduleCaptureButton: View {
         errorMessage = nil
         defer { isProcessing = false }
 
-        guard #available(iOS 26, *) else {
-            errorMessage = "Нужна iOS 26 или новее"
+        guard #available(iOS 27, *) else {
+            errorMessage = "Нужна iOS 27 или новее"
             return
         }
 
         do {
-            let text = try await ScheduleOCR.recognizeText(in: image)
-            let entries = try await ScheduleExtractor.extractSchedule(from: text, targetClassName: targetClassName)
+            let entries = try await ScheduleExtractor.extractSchedule(from: image, targetClassName: targetClassName)
             guard !entries.isEmpty else {
                 errorMessage = "Не удалось распознать расписание на фото"
                 return

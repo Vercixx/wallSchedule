@@ -1,7 +1,9 @@
 import FoundationModels
+import UIKit
 
 // FoundationModels API surface recalled from docs, unverified against a real build.
-@available(iOS 26, *)
+// Image-attachment prompting is an iOS 27 capability (Attachment type), not iOS 26.
+@available(iOS 27, *)
 @Generable
 struct ExtractedLesson {
     @Guide(description: "Порядковый номер урока по расписанию, начиная с 1")
@@ -12,34 +14,36 @@ struct ExtractedLesson {
     let room: String
 }
 
-@available(iOS 26, *)
+@available(iOS 27, *)
 @Generable
 struct ExtractedSchedule {
     let lessons: [ExtractedLesson]
 }
 
-@available(iOS 26, *)
+@available(iOS 27, *)
 enum ScheduleExtractor {
     enum ExtractError: Error {
         case modelUnavailable
     }
 
-    static func extractSchedule(from ocrText: String, targetClassName: String?) async throws -> [ManualLessonEntry] {
+    static func extractSchedule(from image: UIImage, targetClassName: String?) async throws -> [ManualLessonEntry] {
         guard SystemLanguageModel.default.availability == .available else {
             throw ExtractError.modelUnavailable
         }
 
         let instructions = if let targetClassName {
-            "Ниже текст объявления об изменениях в расписании, распознанный с фотографии. На нём может быть расписание нескольких классов. Выбери и верни только уроки класса \"\(targetClassName)\", уроки остальных классов игнорируй. Сохраняй порядок уроков по времени."
+            "На фотографии объявление об изменениях в расписании. На нём может быть расписание нескольких классов. Выбери и верни только уроки класса \"\(targetClassName)\", уроки остальных классов игнорируй. Сохраняй порядок уроков по времени."
         } else {
-            "Ниже текст объявления об изменениях в расписании на сегодня, распознанный с фотографии. Верни список уроков по порядку."
+            "На фотографии объявление об изменениях в расписании на сегодня. Верни список уроков по порядку."
+        }
+
+        let prompt = Prompt {
+            instructions
+            Attachment(image: image)
         }
 
         let session = LanguageModelSession()
-        let response = try await session.respond(
-            to: "\(instructions)\n\nТекст объявления:\n\(ocrText)",
-            generating: ExtractedSchedule.self
-        )
+        let response = try await session.respond(to: prompt, generating: ExtractedSchedule.self)
 
         return response.content.lessons
             .sorted { $0.index < $1.index }
