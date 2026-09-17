@@ -2,10 +2,13 @@ import SwiftUI
 import AVKit
 
 struct TokenGuideView: View {
+    @State private var player = Bundle.main.url(forResource: "proxygen-guide", withExtension: "mov").map(AVPlayer.init(url:))
+
     var body: some View {
         Group {
-            if let url = Bundle.main.url(forResource: "proxygen-guide", withExtension: "mov") {
-                VideoPlayer(player: AVPlayer(url: url))
+            if let player {
+                VideoPlayer(player: player)
+                    .onAppear { player.play() }
             } else {
                 VStack(spacing: 12) {
                     Text("Видео-инструкция не найдена")

@@ -5,6 +5,7 @@ struct ContentView: View {
     @State private var lessons: [Lesson] = []
     @State private var isRefreshing = false
     @State private var errorMessage: String?
+    @State private var showingFriends = false
 
     var body: some View {
         Group {
@@ -38,6 +39,9 @@ struct ContentView: View {
                 Task { await refresh() }
             }
             .disabled(isRefreshing)
+            Button("Друзья") {
+                showingFriends = true
+            }
             Button("Выйти", role: .destructive) {
                 TokenStore.clear()
                 AuthEduClient.clearBootstrapCache()
@@ -46,6 +50,9 @@ struct ContentView: View {
             }
         }
         .padding()
+        .sheet(isPresented: $showingFriends) {
+            FriendsListView()
+        }
     }
 
     private func loadCached() async {
