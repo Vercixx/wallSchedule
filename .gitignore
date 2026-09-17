@@ -1,4 +1,5 @@
 wallSchedule.xcodeproj/
+wallSchedule/Info.plist
 build/
 DerivedData/
 .DS_Store
