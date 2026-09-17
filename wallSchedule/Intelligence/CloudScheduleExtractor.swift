@@ -8,7 +8,7 @@ enum CloudScheduleExtractor {
         case missingModel
         case missingAPIKey
         case invalidEndpoint
-        case http(Int)
+        case http(Int, String)
         case invalidResponse
 
         var errorDescription: String? {
@@ -17,7 +17,7 @@ enum CloudScheduleExtractor {
             case .missingModel: "Не указано название модели в настройках"
             case .missingAPIKey: "Не указан API-ключ в настройках"
             case .invalidEndpoint: "Некорректный адрес облачной модели"
-            case .http(let code): "Сервер вернул ошибку \(code)"
+            case .http(let code, let body): "Сервер вернул ошибку \(code): \(body)"
             case .invalidResponse: "Не удалось разобрать ответ модели"
             }
         }
@@ -102,7 +102,9 @@ enum CloudScheduleExtractor {
 
         let (data, response) = try await URLSession.shared.data(for: urlRequest)
         guard let http = response as? HTTPURLResponse, http.statusCode < 400 else {
-            throw CloudError.http((response as? HTTPURLResponse)?.statusCode ?? -1)
+            let code = (response as? HTTPURLResponse)?.statusCode ?? -1
+            let body = String(data: data.prefix(500), encoding: .utf8) ?? ""
+            throw CloudError.http(code, body)
         }
 
         let chatResponse = try JSONDecoder().decode(ChatResponse.self, from: data)
