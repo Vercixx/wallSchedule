@@ -22,7 +22,7 @@ struct ContentView: View {
     private var scheduleScreen: some View {
         VStack(alignment: .leading, spacing: 12) {
             if lessons.isEmpty {
-                Text("No schedule loaded yet.")
+                Text("Расписание ещё не загружено.")
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(lessons) { lesson in
@@ -34,11 +34,11 @@ struct ContentView: View {
                     .font(.footnote)
                     .foregroundStyle(.red)
             }
-            Button(isRefreshing ? "Refreshing…" : "Refresh now") {
+            Button(isRefreshing ? "Обновление…" : "Обновить") {
                 Task { await refresh() }
             }
             .disabled(isRefreshing)
-            Button("Log out", role: .destructive) {
+            Button("Выйти", role: .destructive) {
                 TokenStore.clear()
                 AuthEduClient.clearBootstrapCache()
                 lessons = []

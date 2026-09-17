@@ -2,7 +2,7 @@ import AppIntents
 import UniformTypeIdentifiers
 
 struct GetWallpaperIntent: AppIntent {
-    static let title: LocalizedStringResource = "Get Wallpaper"
+    static let title: LocalizedStringResource = "Получить обои"
 
     func perform() async throws -> some IntentResult & ReturnsValue<IntentFile> {
         let lessons = try await AuthEduClient.shared.todaySchedule()
@@ -20,7 +20,7 @@ enum GetWallpaperIntentError: Error, CustomLocalizedStringResourceConvertible {
 
     var localizedStringResource: LocalizedStringResource {
         switch self {
-        case .renderFailed: "Could not render the wallpaper image"
+        case .renderFailed: "Не удалось создать изображение обоев"
         }
     }
 }

@@ -1,45 +1,69 @@
 # wallSchedule
 
-Native iOS app that renders today's class schedule (from Моя Школа /
-`authedu.mosreg.ru`) onto a wallpaper image, exposed to Shortcuts via an App
-Intent so it can be set as Home/Lock Screen wallpaper.
+Нативное iOS-приложение, которое рисует расписание уроков на сегодня (из
+Моей Школы / `authedu.mosreg.ru`) поверх обоев и отдаёт картинку в Shortcuts
+через App Intent — оттуда её можно поставить на экран блокировки или домой.
 
-No official public API exists for this backend. The app emulates the
-official app's request headers and enforces a strict local rate limit
-(1-2 automatic requests/day) to avoid triggering anti-automation detection.
-See `project.yml` for the app target and `.github/workflows/build-ipa.yml`
-for the build.
+Официального публичного API у этого бэкенда нет. Приложение повторяет
+заголовки официального клиента и жёстко ограничивает себя 1-2 автоматическими
+запросами в сутки, чтобы не спровоцировать анти-бот детект на сервере.
+Цель приложения и таргет — `project.yml`, сборка — `.github/workflows/build-ipa.yml`.
 
-## Build
+## Сборка
 
-The unsigned `.ipa` is built on GitHub Actions using a macOS runner (Xcode
-project itself is generated on CI via [XcodeGen](https://github.com/yonaskolb/XcodeGen)
-from `project.yml`, not committed). Download the `wallSchedule-ipa` artifact
-from the workflow run and sideload it with AltStore or SideStore, which
-resign it locally using your free Apple ID at install time (re-signing
-needed every 7 days unless you have a paid Apple Developer account).
+Несигнированный `.ipa` собирается в GitHub Actions на macOS-раннере (сам
+Xcode-проект генерируется на CI через [XcodeGen](https://github.com/yonaskolb/XcodeGen)
+из `project.yml`, в репозиторий не коммитится). Скачайте артефакт
+`wallSchedule-ipa` из запуска workflow и установите через AltStore или
+SideStore — они сами подпишут приложение вашим бесплатным Apple ID при
+установке (переподпись нужна каждые 7 дней, если нет платного Apple
+Developer аккаунта).
 
-## Setup
+## Настройка
 
-1. Intercept your own bearer token from the official Дневник.ру / Моя Школа
-   app using mitmproxy or Charles.
-2. Paste it into the app's login screen.
-3. In Shortcuts, build an automation: "Run wallSchedule > Get Wallpaper" →
-   "Set Wallpaper" (Home Screen and/or Lock Screen, no confirmation).
+1. Получите токен доступа через приложение Proxygen (см. видео-инструкцию
+   внутри приложения на экране входа, или раздел ниже про запись видео).
+2. Вставьте токен на экране входа wallSchedule.
+3. В Shortcuts соберите автоматизацию: «Запустить wallSchedule → Получить
+   обои» → «Установить обои» (экран блокировки и/или домой, без
+   подтверждения).
 
-The app enforces a 1-2 automatic-fetch/day cap on its own regardless of how
-often the automation runs, and serves the last cached schedule instead of
-calling the network past that cap.
+Приложение само ограничивает себя 1-2 автоматическими запросами в сутки,
+независимо от того, как часто срабатывает автоматизация, и при превышении
+лимита отдаёт последнее закэшированное расписание вместо обращения к серверу.
 
-Known risk: on iOS 18.0-18.1 the "Set Wallpaper" action can intermittently
-fail when run from an automation trigger (works fine run manually). If that
-happens, fall back to: have the intent return the image, save it to Photos,
-and set the wallpaper manually from there.
+Известный риск: на iOS 18.0-18.1 действие «Установить обои» иногда не
+срабатывает при запуске из автоматизации (при ручном запуске работает
+стабильно). Если это происходит — запасной вариант: пусть интент вернёт
+картинку, сохраните её в Фото и установите обои вручную оттуда.
 
-## Reverting to your normal wallpaper
+## Возврат обычных обоев
 
-Pure Shortcuts, no app involvement:
+Чистый Shortcuts, без участия приложения:
 
-1. Save your normal wallpaper as an image in Photos once.
-2. Build a second time-triggered automation (e.g. "At 5:00 PM") that runs
-   "Set Wallpaper" with that saved image.
+1. Один раз сохраните свои обычные обои как изображение в Фото.
+2. Соберите вторую автоматизацию по времени (например, «в 17:00»), которая
+   запускает «Установить обои» с этим сохранённым изображением.
+
+## Видео-инструкция по Proxygen
+
+Приложение показывает локальное видео `wallSchedule/Resources/proxygen-guide.mp4`
+на экране входа — этого файла в репозитории нет, его нужно записать вручную
+(экран не содержит ничего, что можно было бы сгенерировать без реального
+устройства и установленного Proxygen). Без файла экран покажет заглушку с
+подсказкой, куда его положить.
+
+Текст для озвучки при записи:
+
+1. Установите Proxygen из App Store.
+2. Откройте Proxygen, установите и включите его корневой сертификат в
+   Настройках (Настройки → Основные → Об этом устройстве → Доверие
+   сертификатам), затем включите перехват трафика.
+3. Откройте официальное приложение Дневник.ру / Моя Школа и войдите как
+   обычно.
+4. Вернитесь в Proxygen, найдите запросы к `authedu.mosreg.ru` или
+   `myschool.mosreg.ru`, откройте любой из них и найдите заголовок
+   `Authorization: Bearer <токен>`.
+5. Скопируйте значение токена без слова `Bearer`.
+6. Вернитесь в wallSchedule, вставьте токен на экране входа и нажмите
+   «Сохранить».
