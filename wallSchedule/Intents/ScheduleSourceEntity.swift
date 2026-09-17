@@ -1,8 +1,8 @@
 import AppIntents
 
 struct ScheduleSourceEntity: AppEntity {
-    static var typeDisplayRepresentation: TypeDisplayRepresentation = "Источник расписания"
-    static var defaultQuery = ScheduleSourceQuery()
+    static let typeDisplayRepresentation: TypeDisplayRepresentation = "Источник расписания"
+    static let defaultQuery = ScheduleSourceQuery()
 
     static let meID = "me"
 
