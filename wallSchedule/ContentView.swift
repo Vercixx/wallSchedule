@@ -5,7 +5,7 @@ struct ContentView: View {
     @State private var lessons: [Lesson] = []
     @State private var isRefreshing = false
     @State private var errorMessage: String?
-    @State private var showingFriends = false
+    @State private var showingClasses = false
 
     var body: some View {
         Group {
@@ -39,8 +39,8 @@ struct ContentView: View {
                 Task { await refresh() }
             }
             .disabled(isRefreshing)
-            Button("Друзья") {
-                showingFriends = true
+            Button("Классы") {
+                showingClasses = true
             }
             Button("Выйти", role: .destructive) {
                 TokenStore.clear()
@@ -50,8 +50,8 @@ struct ContentView: View {
             }
         }
         .padding()
-        .sheet(isPresented: $showingFriends) {
-            FriendsListView()
+        .sheet(isPresented: $showingClasses) {
+            ClassesListView()
         }
     }
 

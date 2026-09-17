@@ -1,13 +1,21 @@
 import SwiftUI
 
-struct FriendsListView: View {
+struct ClassesListView: View {
     @State private var friends = FriendsStore.load()
     @State private var newName = ""
+
+    private var myClassName: String {
+        AuthEduClient.cachedClassName() ?? "Мой класс"
+    }
 
     var body: some View {
         NavigationStack {
             List {
-                Section {
+                Section("Мой класс") {
+                    Text(myClassName)
+                        .foregroundStyle(.secondary)
+                }
+                Section("Классы друзей") {
                     ForEach(friends) { friend in
                         NavigationLink(friend.name) {
                             FriendEditorView(friend: bindingFor(friend))
@@ -17,10 +25,8 @@ struct FriendsListView: View {
                         friends.remove(atOffsets: offsets)
                         FriendsStore.save(friends)
                     }
-                }
-                Section("Добавить") {
                     HStack {
-                        TextField("Имя", text: $newName)
+                        TextField("Название класса", text: $newName)
                         Button("Добавить") {
                             let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
                             guard !trimmed.isEmpty else { return }
@@ -32,7 +38,7 @@ struct FriendsListView: View {
                     }
                 }
             }
-            .navigationTitle("Друзья")
+            .navigationTitle("Классы")
         }
     }
 

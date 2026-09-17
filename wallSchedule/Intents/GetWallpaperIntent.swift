@@ -22,21 +22,21 @@ struct GetWallpaperIntent: AppIntent {
             return try await AuthEduClient.shared.todaySchedule()
         }
         guard let uuid = UUID(uuidString: source.id),
-              let friend = FriendsStore.load().first(where: { $0.id == uuid }) else {
-            throw GetWallpaperIntentError.friendNotFound
+              let schoolClass = FriendsStore.load().first(where: { $0.id == uuid }) else {
+            throw GetWallpaperIntentError.classNotFound
         }
-        return friend.todayLessons()
+        return schoolClass.todayLessons()
     }
 }
 
 enum GetWallpaperIntentError: Error, CustomLocalizedStringResourceConvertible {
     case renderFailed
-    case friendNotFound
+    case classNotFound
 
     var localizedStringResource: LocalizedStringResource {
         switch self {
         case .renderFailed: "Не удалось создать изображение обоев"
-        case .friendNotFound: "Этот друг был удалён из приложения"
+        case .classNotFound: "Этот класс был удалён из приложения"
         }
     }
 }

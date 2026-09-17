@@ -15,6 +15,7 @@ actor AuthEduClient {
     private struct Bootstrap: Codable {
         let personId: String
         let role: String
+        let className: String?
     }
 
     private let session = URLSession(configuration: .ephemeral)
@@ -88,9 +89,14 @@ actor AuthEduClient {
             throw ClientError.bootstrapIncomplete
         }
 
-        let bootstrap = Bootstrap(personId: personId, role: role)
+        let bootstrap = Bootstrap(personId: personId, role: role, className: familyProfile.children?.first?.className)
         Self.saveCachedBootstrap(bootstrap)
         return bootstrap
+    }
+
+    // Reads the class name cached during the last successful bootstrap; nil until then.
+    static func cachedClassName() -> String? {
+        loadCachedBootstrap()?.className
     }
 
     private func fetchTodayEvents(bootstrap: Bootstrap) async throws -> [Lesson] {

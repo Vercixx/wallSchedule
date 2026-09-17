@@ -22,7 +22,7 @@ struct ScheduleSourceQuery: EntityQuery {
     }
 
     private static func allEntities() -> [ScheduleSourceEntity] {
-        let me = ScheduleSourceEntity(id: ScheduleSourceEntity.meID, name: "Мои уроки")
+        let me = ScheduleSourceEntity(id: ScheduleSourceEntity.meID, name: AuthEduClient.cachedClassName() ?? "Мой класс")
         let friends = FriendsStore.load().map { ScheduleSourceEntity(id: $0.id.uuidString, name: $0.name) }
         return [me] + friends
     }

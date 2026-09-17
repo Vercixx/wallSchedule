@@ -11,9 +11,11 @@ struct FamilyProfileResponse: Decodable {
     }
     struct Child: Decodable {
         let contingentGuid: String?
+        let className: String?
 
         enum CodingKeys: String, CodingKey {
             case contingentGuid = "contingent_guid"
+            case className = "class_name"
         }
     }
 
