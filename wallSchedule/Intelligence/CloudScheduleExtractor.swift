@@ -99,9 +99,6 @@ enum CloudScheduleExtractor {
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         urlRequest.setValue("application/json", forHTTPHeaderField: "Accept")
         urlRequest.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-        // Default CFNetwork User-Agent gets WAF-blocked by some gateways (confirmed: OpenRouter
-        // via Cloudflare) even though curl with the same key succeeds — spoof a plain client UA.
-        urlRequest.setValue("curl/8.4.0", forHTTPHeaderField: "User-Agent")
         urlRequest.setValue("https://github.com/Vercixx/wallSchedule", forHTTPHeaderField: "HTTP-Referer")
         urlRequest.setValue("wallSchedule", forHTTPHeaderField: "X-Title")
         urlRequest.httpBody = try JSONEncoder().encode(request)
