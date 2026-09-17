@@ -44,6 +44,8 @@ actor AuthEduClient {
 
     // bypassRateLimit is for the manual in-app refresh button only — never from the App Intent.
     func todaySchedule(bypassRateLimit: Bool = false) async throws -> [Lesson] {
+        if let override = TodayOverrideStore.load() { return override }
+
         if !bypassRateLimit {
             guard await ScheduleCache.shared.canFetchNow() else {
                 if let cached = await ScheduleCache.shared.load() { return cached.lessons }
@@ -194,7 +196,7 @@ actor AuthEduClient {
         UserDefaults.standard.set(data, forKey: bootstrapDefaultsKey)
     }
 
-    private static func moscowDateString(_ date: Date) -> String {
+    static func moscowDateString(_ date: Date) -> String {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = moscowTimeZone
         let components = calendar.dateComponents([.year, .month, .day], from: date)

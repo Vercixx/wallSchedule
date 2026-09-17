@@ -27,6 +27,13 @@ struct FriendEditorView: View {
                     Button("+", action: addEntry)
                         .disabled(newSubject.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
+
+                PhotoScheduleCaptureButton(
+                    label: "Заполнить по фото",
+                    targetClassName: friend.name
+                ) { entries in
+                    friend.lessonsByWeekday[selectedDay.rawValue] = entries
+                }
             }
         }
         .navigationTitle(friend.name)

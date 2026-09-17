@@ -23,3 +23,4 @@ targets:
       properties:
         UILaunchScreen: {}
         CFBundleDisplayName: wallSchedule
+        NSCameraUsageDescription: Камера нужна, чтобы сфотографировать объявление об изменениях в расписании.
