@@ -6,6 +6,8 @@ struct SettingsView: View {
     @State private var settings = RenderSettings.load()
     @State private var hasBackgroundImage = BackgroundImageStore.load() != nil
     @State private var selectedPhoto: PhotosPickerItem?
+    @State private var cloudConfig = CloudModelConfig.load()
+    @State private var cloudAPIKey = CloudAPIKeyStore.load() ?? ""
 
     private static let previewLessons = [
         Lesson(index: 1, subject: "Алгебра", room: "204", startAt: Date()),
@@ -63,6 +65,27 @@ struct SettingsView: View {
                             hasBackgroundImage = false
                         }
                     }
+                }
+                Section("Облачная модель для фото расписания") {
+                    Text("Необязательно. Если заполнено, фото расписания отправляется на этот сервер вместо распознавания на устройстве. Нужен OpenAI-совместимый эндпоинт (/chat/completions) и модель с поддержкой изображений.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    TextField("Адрес, например https://api.openai.com/v1", text: Binding(
+                        get: { cloudConfig.endpoint },
+                        set: { cloudConfig.endpoint = $0; cloudConfig.save() }
+                    ))
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    TextField("Модель, например gpt-4o", text: Binding(
+                        get: { cloudConfig.model },
+                        set: { cloudConfig.model = $0; cloudConfig.save() }
+                    ))
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    SecureField("API-ключ", text: Binding(
+                        get: { cloudAPIKey },
+                        set: { cloudAPIKey = $0; CloudAPIKeyStore.save($0) }
+                    ))
                 }
                 Button("Выйти", role: .destructive) {
                     TokenStore.clear()

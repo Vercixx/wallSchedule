@@ -36,11 +36,6 @@ struct PhotoScheduleCaptureButton: View {
         errorMessage = nil
         defer { isProcessing = false }
 
-        guard #available(iOS 27, *) else {
-            errorMessage = "Нужна iOS 27 или новее"
-            return
-        }
-
         do {
             let entries = try await ScheduleExtractor.extractSchedule(from: image, targetClassName: targetClassName)
             guard !entries.isEmpty else {
@@ -48,6 +43,8 @@ struct PhotoScheduleCaptureButton: View {
                 return
             }
             onExtracted(entries)
+        } catch ScheduleExtractor.ExtractError.noModelAvailable {
+            errorMessage = "Нужна iOS 27 или облачная модель в настройках"
         } catch {
             errorMessage = "Ошибка распознавания: \(error.localizedDescription)"
         }
