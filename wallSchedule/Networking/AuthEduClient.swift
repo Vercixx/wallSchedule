@@ -50,11 +50,11 @@ actor AuthEduClient {
             }
         }
 
-        guard let token = TokenStore.load() else { throw ClientError.notLoggedIn }
+        guard TokenStore.load() != nil else { throw ClientError.notLoggedIn }
 
         do {
-            let bootstrap = try await resolveBootstrap(token: token)
-            let lessons = try await fetchTodayEvents(token: token, bootstrap: bootstrap)
+            let bootstrap = try await resolveBootstrap()
+            let lessons = try await fetchTodayEvents(bootstrap: bootstrap)
             await ScheduleCache.shared.recordFetch(lessons: lessons)
             return lessons
         } catch {
@@ -63,13 +63,12 @@ actor AuthEduClient {
         }
     }
 
-    private func resolveBootstrap(token: String) async throws -> Bootstrap {
+    private func resolveBootstrap() async throws -> Bootstrap {
         if let cached = Self.loadCachedBootstrap() { return cached }
 
         let profileInfoURL = URL(string: "https://myschool.mosreg.ru/acl/api/users/profile_info")!
         let profiles: [ProfileInfoEntry] = try await get(
             profileInfoURL,
-            token: token,
             extra: ["partner-source-id": "MOBILE"]
         )
         guard let profileId = profiles.first?.id else { throw ClientError.bootstrapIncomplete }
@@ -77,7 +76,6 @@ actor AuthEduClient {
         let familyProfileURL = URL(string: "https://api.myschool.mosreg.ru/family/mobile/v1/profile")!
         let familyProfile: FamilyProfileResponse = try await get(
             familyProfileURL,
-            token: token,
             extra: [
                 "x-mes-subsystem": "familymp",
                 "client-type": "diary-mobile",
@@ -95,7 +93,7 @@ actor AuthEduClient {
         return bootstrap
     }
 
-    private func fetchTodayEvents(token: String, bootstrap: Bootstrap) async throws -> [Lesson] {
+    private func fetchTodayEvents(bootstrap: Bootstrap) async throws -> [Lesson] {
         let today = Self.moscowDateString(Date())
         var components = URLComponents(string: "https://authedu.mosreg.ru/api/eventcalendar/v1/api/events")!
         components.queryItems = [
@@ -107,7 +105,6 @@ actor AuthEduClient {
 
         let events: EventsResponse = try await get(
             components.url!,
-            token: token,
             extra: [
                 "x-mes-subsystem": "familymp",
                 "client-type": "diary-mobile",
@@ -117,7 +114,10 @@ actor AuthEduClient {
         return (events.response ?? []).toLessons()
     }
 
-    private func get<T: Decodable>(_ url: URL, token: String, extra: [String: String]) async throws -> T {
+    // On 401, refresh once and retry — never loop past one retry.
+    private func get<T: Decodable>(_ url: URL, extra: [String: String], allowRefresh: Bool = true) async throws -> T {
+        guard let token = TokenStore.load() else { throw ClientError.notLoggedIn }
+
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         for (key, value) in headers(token: token, extra: extra) {
@@ -125,15 +125,37 @@ actor AuthEduClient {
         }
 
         let (data, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse, http.statusCode < 400 else {
-            let code = (response as? HTTPURLResponse)?.statusCode ?? -1
-            throw ClientError.http(code)
+        let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+
+        if statusCode == 401, allowRefresh {
+            _ = try await refreshToken(currentToken: token)
+            return try await get(url, extra: extra, allowRefresh: false)
         }
+        guard statusCode < 400 else { throw ClientError.http(statusCode) }
         do {
             return try decoder.decode(T.self, from: data)
         } catch {
             throw ClientError.decode
         }
+    }
+
+    private func refreshToken(currentToken: String) async throws -> String {
+        let url = URL(string: "https://myschool.mosreg.ru/v2/token/refresh")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        for (key, value) in headers(token: currentToken, extra: [:]) {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode < 400 else {
+            throw ClientError.http((response as? HTTPURLResponse)?.statusCode ?? -1)
+        }
+        let newToken = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let newToken, !newToken.isEmpty else { throw ClientError.decode }
+
+        TokenStore.save(newToken)
+        return newToken
     }
 
     private func headers(token: String, extra: [String: String]) -> [String: String] {

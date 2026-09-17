@@ -35,3 +35,11 @@ Known risk: on iOS 18.0-18.1 the "Set Wallpaper" action can intermittently
 fail when run from an automation trigger (works fine run manually). If that
 happens, fall back to: have the intent return the image, save it to Photos,
 and set the wallpaper manually from there.
+
+## Reverting to your normal wallpaper
+
+Pure Shortcuts, no app involvement:
+
+1. Save your normal wallpaper as an image in Photos once.
+2. Build a second time-triggered automation (e.g. "At 5:00 PM") that runs
+   "Set Wallpaper" with that saved image.
