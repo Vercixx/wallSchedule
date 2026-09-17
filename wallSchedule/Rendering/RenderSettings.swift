@@ -4,7 +4,8 @@ import UIKit
 struct RenderSettings: Codable, Equatable {
     var backgroundHex: String = "#000000"
     var textHex: String = "#FFFFFF"
-    var fontDesign: FontDesignOption = .default
+    var fontFamily: String = SystemFonts.systemSentinel
+    var textSize: Double = 34
 
     var backgroundColor: Color { Color(hex: backgroundHex) }
     var textColor: Color { Color(hex: textHex) }
@@ -25,27 +26,11 @@ struct RenderSettings: Codable, Equatable {
     }
 }
 
-enum FontDesignOption: String, Codable, CaseIterable, Identifiable {
-    case `default`, rounded, serif, monospaced
+enum SystemFonts {
+    static let systemSentinel = "Системный"
 
-    var id: String { rawValue }
-
-    var displayName: String {
-        switch self {
-        case .default: "Обычный"
-        case .rounded: "Скруглённый"
-        case .serif: "С засечками"
-        case .monospaced: "Моноширинный"
-        }
-    }
-
-    var swiftUIDesign: Font.Design {
-        switch self {
-        case .default: .default
-        case .rounded: .rounded
-        case .serif: .serif
-        case .monospaced: .monospaced
-        }
+    static var familyNames: [String] {
+        [systemSentinel] + UIFont.familyNames.sorted()
     }
 }
 

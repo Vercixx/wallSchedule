@@ -11,14 +11,21 @@ struct ScheduleWallpaperView: View {
             VStack(alignment: .leading, spacing: 16) {
                 ForEach(lessons) { lesson in
                     Text(lesson.displayLine)
-                        .font(.system(size: 34, weight: .semibold, design: settings.fontDesign.swiftUIDesign))
+                        .font(lessonFont)
                         .foregroundStyle(settings.textColor)
                 }
             }
             .padding(48)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(width: 1290, height: 2796)
+        .frame(width: WallpaperGeometry.pointSize.width, height: WallpaperGeometry.pointSize.height)
+    }
+
+    private var lessonFont: Font {
+        guard settings.fontFamily != SystemFonts.systemSentinel else {
+            return .system(size: settings.textSize, weight: .semibold)
+        }
+        return .custom(settings.fontFamily, size: settings.textSize).weight(.semibold)
     }
 
     @ViewBuilder
@@ -27,7 +34,7 @@ struct ScheduleWallpaperView: View {
             Image(uiImage: uiImage)
                 .resizable()
                 .scaledToFill()
-                .frame(width: 1290, height: 2796)
+                .frame(width: WallpaperGeometry.pointSize.width, height: WallpaperGeometry.pointSize.height)
                 .clipped()
                 .overlay(Color.black.opacity(0.35))
         } else {
@@ -42,7 +49,7 @@ enum ScheduleImageRenderer {
     static func renderPNG(lessons: [Lesson], settings: RenderSettings) -> Data? {
         let view = ScheduleWallpaperView(lessons: lessons, settings: settings)
         let renderer = ImageRenderer(content: view)
-        renderer.scale = 3
+        renderer.scale = WallpaperGeometry.scale
         guard let uiImage = renderer.uiImage else { return nil }
         return uiImage.pngData()
     }

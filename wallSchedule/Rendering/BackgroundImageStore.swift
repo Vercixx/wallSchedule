@@ -2,7 +2,9 @@ import UIKit
 
 // Downscales/recompresses on save — PhotosPicker originals can be many MB, wallpaper canvas isn't.
 enum BackgroundImageStore {
-    private static let maxDimension: CGFloat = 1600
+    private static var maxDimension: CGFloat {
+        max(WallpaperGeometry.pixelSize.width, WallpaperGeometry.pixelSize.height)
+    }
 
     private static var fileURL: URL {
         let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]

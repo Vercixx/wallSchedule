@@ -7,9 +7,27 @@ struct SettingsView: View {
     @State private var hasBackgroundImage = BackgroundImageStore.load() != nil
     @State private var selectedPhoto: PhotosPickerItem?
 
+    private static let previewLessons = [
+        Lesson(index: 1, subject: "Алгебра", room: "204", startAt: Date()),
+        Lesson(index: 2, subject: "Русский язык", room: "201", startAt: Date()),
+        Lesson(index: 3, subject: "Физика", room: "310", startAt: Date()),
+    ]
+
     var body: some View {
         NavigationStack {
             Form {
+                Section("Предпросмотр") {
+                    GeometryReader { geo in
+                        let native = WallpaperGeometry.pointSize
+                        let scale = geo.size.width / native.width
+                        ScheduleWallpaperView(lessons: Self.previewLessons, settings: settings)
+                            .frame(width: native.width, height: native.height)
+                            .scaleEffect(scale)
+                            .frame(width: geo.size.width, height: native.height * scale)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .frame(height: 300)
+                }
                 Section("Обои") {
                     ColorPicker("Цвет фона", selection: Binding(
                         get: { settings.backgroundColor },
@@ -20,12 +38,23 @@ struct SettingsView: View {
                         set: { settings.textHex = $0.hexString; settings.save() }
                     ))
                     Picker("Шрифт", selection: Binding(
-                        get: { settings.fontDesign },
-                        set: { settings.fontDesign = $0; settings.save() }
+                        get: { settings.fontFamily },
+                        set: { settings.fontFamily = $0; settings.save() }
                     )) {
-                        ForEach(FontDesignOption.allCases) { option in
-                            Text(option.displayName).tag(option)
+                        ForEach(SystemFonts.familyNames, id: \.self) { name in
+                            Text(name).tag(name)
                         }
+                    }
+                    VStack(alignment: .leading) {
+                        Text("Размер текста: \(Int(settings.textSize))")
+                        Slider(
+                            value: Binding(
+                                get: { settings.textSize },
+                                set: { settings.textSize = $0; settings.save() }
+                            ),
+                            in: 20...60,
+                            step: 2
+                        )
                     }
                     PhotosPicker("Фон из Фото", selection: $selectedPhoto, matching: .images)
                     if hasBackgroundImage {
