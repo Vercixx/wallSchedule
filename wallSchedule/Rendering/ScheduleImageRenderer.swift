@@ -7,11 +7,11 @@ struct ScheduleWallpaperView: View {
 
     var body: some View {
         ZStack {
-            settings.backgroundColor.ignoresSafeArea()
+            background
             VStack(alignment: .leading, spacing: 16) {
                 ForEach(lessons) { lesson in
                     Text(lesson.displayLine)
-                        .font(.system(size: 34, weight: .semibold))
+                        .font(.system(size: 34, weight: .semibold, design: settings.fontDesign.swiftUIDesign))
                         .foregroundStyle(settings.textColor)
                 }
             }
@@ -19,6 +19,20 @@ struct ScheduleWallpaperView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .frame(width: 1290, height: 2796)
+    }
+
+    @ViewBuilder
+    private var background: some View {
+        if let data = BackgroundImageStore.load(), let uiImage = UIImage(data: data) {
+            Image(uiImage: uiImage)
+                .resizable()
+                .scaledToFill()
+                .frame(width: 1290, height: 2796)
+                .clipped()
+                .overlay(Color.black.opacity(0.35))
+        } else {
+            settings.backgroundColor.ignoresSafeArea()
+        }
     }
 }
 
