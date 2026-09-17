@@ -39,7 +39,7 @@ enum ScheduleExtractor {
 
         let prompt = Prompt {
             instructions
-            Attachment(image: image)
+            Attachment(image)
         }
 
         let session = LanguageModelSession()
