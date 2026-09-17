@@ -43,8 +43,6 @@ struct PhotoScheduleCaptureButton: View {
                 return
             }
             onExtracted(entries)
-        } catch ScheduleExtractor.ExtractError.noModelAvailable {
-            errorMessage = "Нужна iOS 27 или облачная модель в настройках"
         } catch {
             errorMessage = "Ошибка распознавания: \(error.localizedDescription)"
         }

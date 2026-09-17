@@ -3,11 +3,24 @@ import UIKit
 // OpenAI-compatible /chat/completions with an image_url content part — works against
 // OpenAI itself and most compatible proxies/self-hosted servers alike.
 enum CloudScheduleExtractor {
-    enum CloudError: Error {
-        case notConfigured
+    enum CloudError: Error, LocalizedError {
+        case missingEndpoint
+        case missingModel
+        case missingAPIKey
         case invalidEndpoint
         case http(Int)
         case invalidResponse
+
+        var errorDescription: String? {
+            switch self {
+            case .missingEndpoint: "Не указан адрес облачной модели в настройках"
+            case .missingModel: "Не указано название модели в настройках"
+            case .missingAPIKey: "Не указан API-ключ в настройках"
+            case .invalidEndpoint: "Некорректный адрес облачной модели"
+            case .http(let code): "Сервер вернул ошибку \(code)"
+            case .invalidResponse: "Не удалось разобрать ответ модели"
+            }
+        }
     }
 
     private struct ChatRequest: Encodable {
@@ -50,10 +63,14 @@ enum CloudScheduleExtractor {
     }
 
     static func extractSchedule(from image: UIImage, targetClassName: String?) async throws -> [ManualLessonEntry] {
-        let config = CloudModelConfig.load()
-        guard config.isConfigured, let apiKey = CloudAPIKeyStore.load() else {
-            throw CloudError.notConfigured
-        }
+        let endpoint = CloudModelConfig.load().endpoint.trimmingCharacters(in: .whitespacesAndNewlines)
+        let model = CloudModelConfig.load().model.trimmingCharacters(in: .whitespacesAndNewlines)
+        let apiKey = (CloudAPIKeyStore.load() ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !endpoint.isEmpty else { throw CloudError.missingEndpoint }
+        guard !model.isEmpty else { throw CloudError.missingModel }
+        guard !apiKey.isEmpty else { throw CloudError.missingAPIKey }
+
         guard let jpeg = image.jpegData(compressionQuality: 0.8) else {
             throw CloudError.invalidResponse
         }
@@ -66,7 +83,7 @@ enum CloudScheduleExtractor {
         }
 
         let request = ChatRequest(
-            model: config.model,
+            model: model,
             messages: [
                 .init(role: "system", content: [.init(type: "text", text: Self.systemPrompt, imageURL: nil)]),
                 .init(role: "user", content: [
@@ -77,7 +94,7 @@ enum CloudScheduleExtractor {
             temperature: 0
         )
 
-        var urlRequest = URLRequest(url: try endpointURL(base: config.endpoint))
+        var urlRequest = URLRequest(url: try endpointURL(base: endpoint))
         urlRequest.httpMethod = "POST"
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         urlRequest.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")

@@ -22,8 +22,12 @@ struct ExtractedSchedule {
 
 @available(iOS 27, *)
 enum OnDeviceScheduleExtractor {
-    enum ExtractError: Error {
+    enum ExtractError: Error, LocalizedError {
         case modelUnavailable
+
+        var errorDescription: String? {
+            "Модель на устройстве недоступна (проверьте Apple Intelligence в настройках iOS)"
+        }
     }
 
     static func extractSchedule(from image: UIImage, targetClassName: String?) async throws -> [ManualLessonEntry] {
