@@ -3,17 +3,15 @@ import SwiftUI
 struct ClassesListView: View {
     @State private var friends = FriendsStore.load()
     @State private var newName = ""
-
-    private var myClassName: String {
-        AuthEduClient.cachedClassName() ?? "Мой класс"
-    }
+    @State private var myClassName = AuthEduClient.cachedClassName()
 
     var body: some View {
         NavigationStack {
             List {
                 Section("Мой класс") {
-                    Text(myClassName)
-                        .foregroundStyle(.secondary)
+                    NavigationLink(myClassName ?? "Мой класс") {
+                        MyClassView()
+                    }
                 }
                 Section("Классы друзей") {
                     ForEach(friends) { friend in
@@ -39,6 +37,11 @@ struct ClassesListView: View {
                 }
             }
             .navigationTitle("Классы")
+            .task {
+                if myClassName == nil {
+                    myClassName = await AuthEduClient.shared.resolveClassName()
+                }
+            }
         }
     }
 

@@ -99,6 +99,12 @@ actor AuthEduClient {
         loadCachedBootstrap()?.className
     }
 
+    // Resolves and caches the class name via bootstrap only — no events fetch, not rate-limited.
+    func resolveClassName() async -> String? {
+        guard TokenStore.load() != nil else { return nil }
+        return try? await resolveBootstrap().className
+    }
+
     private func fetchTodayEvents(bootstrap: Bootstrap) async throws -> [Lesson] {
         let today = Self.moscowDateString(Date())
         var components = URLComponents(string: "https://authedu.mosreg.ru/api/eventcalendar/v1/api/events")!
