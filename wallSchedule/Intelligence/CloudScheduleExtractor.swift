@@ -47,17 +47,19 @@ enum CloudScheduleExtractor {
 
     private struct ChatResponse: Decodable {
         struct Choice: Decodable {
-            struct Message: Decodable { let content: String }
+            struct Message: Decodable { let content: String? }
             let message: Message
         }
         let choices: [Choice]
     }
 
+    // Fields declared optional on purpose — a free/small model can emit JSON null
+    // for a field it isn't sure about instead of following the "empty string" instruction.
     private struct ScheduleDTO: Decodable {
         struct LessonDTO: Decodable {
-            let index: Int
-            let subject: String
-            let room: String
+            let index: Int?
+            let subject: String?
+            let room: String?
         }
         let lessons: [LessonDTO]
     }
@@ -112,14 +114,17 @@ enum CloudScheduleExtractor {
 
         let chatResponse = try JSONDecoder().decode(ChatResponse.self, from: data)
         guard let content = chatResponse.choices.first?.message.content,
-              let jsonData = stripCodeFence(content).data(using: .utf8) else {
+              !content.isEmpty,
+              let jsonData = stripCodeFence(content).data(using: .utf8),
+              !jsonData.isEmpty else {
             throw CloudError.invalidResponse
         }
 
         let schedule = try JSONDecoder().decode(ScheduleDTO.self, from: jsonData)
         return schedule.lessons
-            .sorted { $0.index < $1.index }
-            .map { ManualLessonEntry(subject: $0.subject, room: $0.room) }
+            .enumerated()
+            .sorted { ($0.element.index ?? $0.offset) < ($1.element.index ?? $1.offset) }
+            .map { ManualLessonEntry(subject: $0.element.subject ?? "", room: $0.element.room ?? "") }
     }
 
     private static let systemPrompt = """
