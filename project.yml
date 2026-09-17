@@ -1,0 +1,24 @@
+name: wallSchedule
+options:
+  bundleIdPrefix: io.github.Vercixx
+  deploymentTarget:
+    iOS: "18.0"
+targets:
+  wallSchedule:
+    type: application
+    platform: iOS
+    sources:
+      - wallSchedule
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.Vercixx.wallSchedule
+        SWIFT_VERSION: "6.0"
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGNING_REQUIRED: NO
+        CODE_SIGNING_ALLOWED: NO
+        CODE_SIGN_IDENTITY: ""
+        DEVELOPMENT_TEAM: ""
+    info:
+      properties:
+        UILaunchScreen: {}
+        CFBundleDisplayName: wallSchedule

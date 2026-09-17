@@ -1,0 +1,43 @@
+name: Build IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Show available SDKs
+        run: xcodebuild -showsdks
+
+      - name: Archive
+        run: |
+          xcodebuild archive \
+            -project wallSchedule.xcodeproj \
+            -scheme wallSchedule \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/wallSchedule.xcarchive \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
+
+      - name: Package IPA
+        run: |
+          mkdir -p build/Payload
+          cp -r build/wallSchedule.xcarchive/Products/Applications/wallSchedule.app build/Payload/
+          cd build
+          zip -r wallSchedule.ipa Payload
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wallSchedule-ipa
+          path: build/wallSchedule.ipa
