@@ -45,6 +45,34 @@ enum CloudScheduleExtractor {
         let temperature: Double
     }
 
+    // Providers disagree on shape: `{"error": "text"}` vs `{"error": {"message": "text"}}`.
+    private struct ErrorEnvelope: Decodable {
+        enum ErrorValue: Decodable {
+            case text(String)
+            case object(message: String?)
+
+            init(from decoder: Decoder) throws {
+                let container = try decoder.singleValueContainer()
+                if let string = try? container.decode(String.self) {
+                    self = .text(string)
+                } else {
+                    struct Nested: Decodable { let message: String? }
+                    self = .object(message: try container.decode(Nested.self).message)
+                }
+            }
+
+            var message: String {
+                switch self {
+                case .text(let string): string
+                case .object(let message): message ?? "неизвестная ошибка"
+                }
+            }
+        }
+
+        let success: Bool?
+        let error: ErrorValue?
+    }
+
     private struct ChatResponse: Decodable {
         struct Choice: Decodable {
             struct Message: Decodable { let content: String? }
@@ -106,10 +134,17 @@ enum CloudScheduleExtractor {
         urlRequest.httpBody = try JSONEncoder().encode(request)
 
         let (data, response) = try await URLSession.shared.data(for: urlRequest)
-        guard let http = response as? HTTPURLResponse, http.statusCode < 400 else {
-            let code = (response as? HTTPURLResponse)?.statusCode ?? -1
+        let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+
+        // Some gateways (confirmed: seen via mitmproxy) wrap an error in an HTTP 200 —
+        // check for an error envelope before assuming a low status code means success.
+        if let envelope = try? JSONDecoder().decode(ErrorEnvelope.self, from: data),
+           envelope.success == false || envelope.error != nil {
+            throw CloudError.http(statusCode, envelope.error?.message ?? "провайдер вернул ошибку")
+        }
+        guard statusCode < 400 else {
             let body = String(data: data.prefix(500), encoding: .utf8) ?? ""
-            throw CloudError.http(code, body)
+            throw CloudError.http(statusCode, body)
         }
 
         let chatResponse = try JSONDecoder().decode(ChatResponse.self, from: data)
