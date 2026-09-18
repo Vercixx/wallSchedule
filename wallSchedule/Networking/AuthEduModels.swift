@@ -59,7 +59,7 @@ struct Lesson: Codable, Identifiable, Equatable {
 extension EventsResponse.Item {
     func toLesson() -> Lesson? {
         guard cancelled != true, let subjectName, let startAt else { return nil }
-        let room = roomName ?? roomNumber ?? "?"
+        let room = roomNumber ?? roomName ?? "?"
         return Lesson(index: 0, subject: subjectName, room: room, startAt: startAt)
     }
 }
