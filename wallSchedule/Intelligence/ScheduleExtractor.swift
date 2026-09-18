@@ -7,7 +7,7 @@ enum ScheduleExtractor {
 
         var errorDescription: String? {
             switch self {
-            case .noModelAvailable: "Нужна iOS 27 или облачная модель в настройках"
+            case .noModelAvailable: "Настройте облачную модель в настройках"
             case .timedOut: "Распознавание не дало прогресса слишком долго, попробуйте ещё раз"
             }
         }
@@ -38,10 +38,7 @@ enum ScheduleExtractor {
         targetClassName: String?,
         onProgress: @escaping @MainActor (Int) -> Void
     ) async throws -> [ManualLessonEntry] {
-        if CloudModelConfig.load().isConfigured {
-            return try await CloudScheduleExtractor.extractSchedule(from: image, targetClassName: targetClassName, onProgress: onProgress)
-        }
-        guard #available(iOS 27, *) else { throw ExtractError.noModelAvailable }
-        return try await OnDeviceScheduleExtractor.extractSchedule(from: image, targetClassName: targetClassName)
+        guard CloudModelConfig.load().isConfigured else { throw ExtractError.noModelAvailable }
+        return try await CloudScheduleExtractor.extractSchedule(from: image, targetClassName: targetClassName, onProgress: onProgress)
     }
 }
