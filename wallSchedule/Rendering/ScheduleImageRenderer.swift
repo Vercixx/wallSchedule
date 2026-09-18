@@ -16,7 +16,7 @@ struct ScheduleWallpaperView: View {
                 }
             }
             .padding(48)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         }
         .frame(width: WallpaperGeometry.pointSize.width, height: WallpaperGeometry.pointSize.height)
     }
