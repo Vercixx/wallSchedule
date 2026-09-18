@@ -21,11 +21,11 @@ struct SettingsView: View {
                 Section("Предпросмотр") {
                     GeometryReader { geo in
                         let native = WallpaperGeometry.pointSize
-                        let scale = geo.size.width / native.width
+                        let scale = min(geo.size.width / native.width, geo.size.height / native.height)
                         ScheduleWallpaperView(lessons: Self.previewLessons, settings: settings)
                             .frame(width: native.width, height: native.height)
                             .scaleEffect(scale)
-                            .frame(width: geo.size.width, height: native.height * scale)
+                            .frame(width: geo.size.width, height: geo.size.height)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
                     .frame(height: 300)
@@ -58,7 +58,7 @@ struct SettingsView: View {
                             step: 2
                         )
                     }
-                    PhotosPicker("Фон из Фото", selection: $selectedPhoto, matching: .images)
+                    PhotosPicker("Добавить фото на фон", selection: $selectedPhoto, matching: .images)
                     if hasBackgroundImage {
                         Button("Сбросить фон", role: .destructive) {
                             BackgroundImageStore.clear()
@@ -67,7 +67,7 @@ struct SettingsView: View {
                     }
                 }
                 Section("Облачная модель для фото расписания") {
-                    Text("Необязательно. Если заполнено, фото расписания отправляется на этот сервер вместо распознавания на устройстве. Нужен OpenAI-совместимый эндпоинт (/chat/completions) и модель с поддержкой изображений. Некоторые провайдеры (например OpenRouter) блокируют доступ из России — если получаете «Access denied by security policy» или похожую ошибку, дело не в приложении, а в блокировке на стороне провайдера.")
+                    Text("Нужна для распознавания расписания по фото. Нужен OpenAI-совместимый эндпоинт (/chat/completions) и модель с поддержкой изображений. Некоторые провайдеры (например OpenRouter) блокируют доступ из России — если получаете «Access denied by security policy» или похожую ошибку, дело не в приложении, а в блокировке на стороне провайдера.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                     TextField("Адрес, например https://api.openai.com/v1", text: Binding(
