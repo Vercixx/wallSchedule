@@ -13,10 +13,11 @@ struct ScheduleWallpaperView: View {
                     Text(lesson.displayLine)
                         .font(lessonFont)
                         .foregroundStyle(settings.textColor)
+                        .multilineTextAlignment(.center)
                 }
             }
             .padding(48)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         }
         .frame(width: WallpaperGeometry.pointSize.width, height: WallpaperGeometry.pointSize.height)
     }
