@@ -1,7 +1,7 @@
 import UIKit
 
-// OpenAI-compatible /chat/completions with an image_url content part — works against
-// OpenAI itself and most compatible proxies/self-hosted servers alike.
+// OpenAI-compatible /chat/completions, streamed (SSE) so a slow-but-active reasoning
+// model isn't indistinguishable from a genuinely stuck connection.
 enum CloudScheduleExtractor {
     enum CloudError: Error, LocalizedError {
         case missingEndpoint
@@ -43,6 +43,7 @@ enum CloudScheduleExtractor {
         let model: String
         let messages: [Message]
         let temperature: Double
+        let stream: Bool
     }
 
     // Providers disagree on shape: `{"error": "text"}` vs `{"error": {"message": "text"}}`.
@@ -73,12 +74,13 @@ enum CloudScheduleExtractor {
         let error: ErrorValue?
     }
 
-    private struct ChatResponse: Decodable {
+    private struct StreamChunk: Decodable {
         struct Choice: Decodable {
-            struct Message: Decodable { let content: String? }
-            let message: Message
+            struct Delta: Decodable { let content: String? }
+            let delta: Delta?
         }
-        let choices: [Choice]
+        let choices: [Choice]?
+        let error: ErrorEnvelope.ErrorValue?
     }
 
     // Fields declared optional on purpose — a free/small model can emit JSON null
@@ -92,7 +94,11 @@ enum CloudScheduleExtractor {
         let lessons: [LessonDTO]
     }
 
-    static func extractSchedule(from image: UIImage, targetClassName: String?) async throws -> [ManualLessonEntry] {
+    static func extractSchedule(
+        from image: UIImage,
+        targetClassName: String?,
+        onProgress: @escaping @MainActor (Int) -> Void = { _ in }
+    ) async throws -> [ManualLessonEntry] {
         let endpoint = CloudModelConfig.load().endpoint.trimmingCharacters(in: .whitespacesAndNewlines)
         let model = CloudModelConfig.load().model.trimmingCharacters(in: .whitespacesAndNewlines)
         let apiKey = (CloudAPIKeyStore.load() ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
@@ -121,35 +127,41 @@ enum CloudScheduleExtractor {
                     .init(type: "image_url", text: nil, imageURL: .init(url: "data:image/jpeg;base64,\(base64)")),
                 ]),
             ],
-            temperature: 0
+            temperature: 0,
+            stream: true
         )
 
         var urlRequest = URLRequest(url: try endpointURL(base: endpoint))
         urlRequest.httpMethod = "POST"
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        urlRequest.setValue("application/json", forHTTPHeaderField: "Accept")
+        urlRequest.setValue("text/event-stream", forHTTPHeaderField: "Accept")
         urlRequest.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         urlRequest.setValue("https://github.com/Vercixx/wallSchedule", forHTTPHeaderField: "HTTP-Referer")
         urlRequest.setValue("wallSchedule", forHTTPHeaderField: "X-Title")
         urlRequest.httpBody = try JSONEncoder().encode(request)
 
-        let (data, response) = try await URLSession.shared.data(for: urlRequest)
-        let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+        let config = URLSessionConfiguration.default
+        // Long — this now only guards a truly dead connection; per-chunk activity is what matters.
+        config.timeoutIntervalForRequest = 300
+        let session = URLSession(configuration: config)
 
-        // Some gateways (confirmed: seen via mitmproxy) wrap an error in an HTTP 200 —
-        // check for an error envelope before assuming a low status code means success.
-        if let envelope = try? JSONDecoder().decode(ErrorEnvelope.self, from: data),
-           envelope.success == false || envelope.error != nil {
-            throw CloudError.http(statusCode, envelope.error?.message ?? "провайдер вернул ошибку")
-        }
-        guard statusCode < 400 else {
-            let body = String(data: data.prefix(500), encoding: .utf8) ?? ""
+        let (bytes, response) = try await session.bytes(for: urlRequest)
+        let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+        let contentType = (response as? HTTPURLResponse)?.value(forHTTPHeaderField: "Content-Type") ?? ""
+
+        guard statusCode < 400, contentType.contains("text/event-stream") else {
+            var collected = Data()
+            for try await byte in bytes { collected.append(byte) }
+            if let envelope = try? JSONDecoder().decode(ErrorEnvelope.self, from: collected),
+               envelope.success == false || envelope.error != nil {
+                throw CloudError.http(statusCode, envelope.error?.message ?? "провайдер вернул ошибку")
+            }
+            let body = String(data: collected.prefix(500), encoding: .utf8) ?? ""
             throw CloudError.http(statusCode, body)
         }
 
-        let chatResponse = try JSONDecoder().decode(ChatResponse.self, from: data)
-        guard let content = chatResponse.choices.first?.message.content,
-              !content.isEmpty,
+        let content = try await streamContent(bytes: bytes, onProgress: onProgress)
+        guard !content.isEmpty,
               let jsonData = stripCodeFence(content).data(using: .utf8),
               !jsonData.isEmpty else {
             throw CloudError.invalidResponse
@@ -160,6 +172,28 @@ enum CloudScheduleExtractor {
             .enumerated()
             .sorted { ($0.element.index ?? $0.offset) < ($1.element.index ?? $1.offset) }
             .map { ManualLessonEntry(subject: $0.element.subject ?? "", room: $0.element.room ?? "") }
+    }
+
+    private static func streamContent(
+        bytes: URLSession.AsyncBytes,
+        onProgress: @escaping @MainActor (Int) -> Void
+    ) async throws -> String {
+        var fullContent = ""
+        for try await line in bytes.lines {
+            guard line.hasPrefix("data: ") else { continue }
+            let payload = String(line.dropFirst(6))
+            if payload == "[DONE]" { break }
+            guard let chunkData = payload.data(using: .utf8),
+                  let chunk = try? JSONDecoder().decode(StreamChunk.self, from: chunkData) else { continue }
+            if let error = chunk.error {
+                throw CloudError.http(-1, error.message)
+            }
+            if let delta = chunk.choices?.first?.delta?.content, !delta.isEmpty {
+                fullContent += delta
+                await onProgress(fullContent.count)
+            }
+        }
+        return fullContent
     }
 
     private static let systemPrompt = """
