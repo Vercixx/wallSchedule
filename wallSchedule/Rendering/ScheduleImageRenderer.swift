@@ -5,22 +5,17 @@ struct ScheduleWallpaperView: View {
     let lessons: [Lesson]
     let settings: RenderSettings
 
-    var body: some View {
-        ZStack {
-            background
-            VStack(alignment: .leading, spacing: 16) {
-                ForEach(lessons) { lesson in
-                    Text(lesson.displayLine)
-                        .font(lessonFont)
-                        .foregroundStyle(settings.textColor)
-                        .multilineTextAlignment(.center)
-                }
-            }
-            .padding(48)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+    VStack(alignment: .center, spacing: 16) {
+        ForEach(lessons) { lesson in
+            Text(lesson.displayLine)
+            .font(lessonFont)
+            .foregroundStyle(settings.textColor)
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity)
         }
-        .frame(width: WallpaperGeometry.pointSize.width, height: WallpaperGeometry.pointSize.height)
     }
+    .padding(48)
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
 
     private var lessonFont: Font {
         guard settings.fontFamily != SystemFonts.systemSentinel else {
