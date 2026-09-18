@@ -4,7 +4,7 @@ import PhotosUI
 struct SettingsView: View {
     @Binding var isLoggedIn: Bool
     @State private var settings = RenderSettings.load()
-    @State private var hasBackgroundImage = BackgroundImageStore.load() != nil
+    @State private var backgroundImageData = BackgroundImageStore.load()
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var cloudConfig = CloudModelConfig.load()
     @State private var cloudAPIKey = CloudAPIKeyStore.load() ?? ""
@@ -59,10 +59,10 @@ struct SettingsView: View {
                         )
                     }
                     PhotosPicker("Добавить фото на фон", selection: $selectedPhoto, matching: .images)
-                    if hasBackgroundImage {
+                    if backgroundImageData != nil {
                         Button("Сбросить фон", role: .destructive) {
                             BackgroundImageStore.clear()
-                            hasBackgroundImage = false
+                            backgroundImageData = nil
                         }
                     }
                 }
@@ -99,7 +99,7 @@ struct SettingsView: View {
                 Task {
                     guard let newValue, let data = try? await newValue.loadTransferable(type: Data.self) else { return }
                     BackgroundImageStore.save(data)
-                    hasBackgroundImage = true
+                    backgroundImageData = data
                 }
             }
         }
