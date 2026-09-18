@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ClassesListView: View {
     @State private var friends = FriendsStore.load()
+    @State private var myClass = MyClassStore.load() ?? FriendSchedule(name: "Я")
     @State private var newName = ""
     @State private var myClassName = AuthEduClient.cachedClassName()
 
@@ -10,13 +11,13 @@ struct ClassesListView: View {
             List {
                 Section("Мой класс") {
                     NavigationLink(myClassName ?? "Мой класс") {
-                        MyClassView()
+                        ClassScheduleView(schedule: myClassBinding, isSelf: true)
                     }
                 }
                 Section("Классы друзей") {
                     ForEach(friends) { friend in
                         NavigationLink(friend.name) {
-                            FriendEditorView(friend: bindingFor(friend))
+                            ClassScheduleView(schedule: bindingFor(friend))
                         }
                     }
                     .onDelete { offsets in
@@ -43,6 +44,13 @@ struct ClassesListView: View {
                 }
             }
         }
+    }
+
+    private var myClassBinding: Binding<FriendSchedule> {
+        Binding(
+            get: { myClass },
+            set: { myClass = $0; MyClassStore.save(myClass) }
+        )
     }
 
     private func bindingFor(_ friend: FriendSchedule) -> Binding<FriendSchedule> {

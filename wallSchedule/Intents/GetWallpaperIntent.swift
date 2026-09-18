@@ -19,7 +19,8 @@ struct GetWallpaperIntent: AppIntent {
 
     private func lessons(for source: ScheduleSourceEntity) async throws -> [Lesson] {
         guard source.id != ScheduleSourceEntity.meID else {
-            return try await AuthEduClient.shared.todaySchedule()
+            let manual = MyClassStore.load()?.todayLessons() ?? []
+            return manual.isEmpty ? try await AuthEduClient.shared.todaySchedule() : manual
         }
         guard let uuid = UUID(uuidString: source.id),
               let schoolClass = FriendsStore.load().first(where: { $0.id == uuid }) else {

@@ -44,7 +44,6 @@ actor AuthEduClient {
 
     // bypassRateLimit is for the manual in-app refresh button only — never from the App Intent.
     func todaySchedule(bypassRateLimit: Bool = false) async throws -> [Lesson] {
-        if let override = TodayOverrideStore.load() { return override }
 
         if !bypassRateLimit {
             guard await ScheduleCache.shared.canFetchNow() else {

@@ -90,7 +90,6 @@ struct SettingsView: View {
                 Button("Выйти", role: .destructive) {
                     TokenStore.clear()
                     AuthEduClient.clearBootstrapCache()
-                    TodayOverrideStore.clear()
                     isLoggedIn = false
                 }
             }
