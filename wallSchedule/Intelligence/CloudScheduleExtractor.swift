@@ -76,7 +76,7 @@ enum CloudScheduleExtractor {
 
     private struct StreamChunk: Decodable {
         struct Choice: Decodable {
-            struct Delta: Decodable { let content: String? }
+            struct Delta: Decodable { let content: String?; let reasoning: String? }
             let delta: Delta?
         }
         let choices: [Choice]?
@@ -160,25 +160,32 @@ enum CloudScheduleExtractor {
             throw CloudError.http(statusCode, body)
         }
 
-        let content = try await streamContent(bytes: bytes, onProgress: onProgress)
-        guard !content.isEmpty,
-              let jsonData = stripCodeFence(content).data(using: .utf8),
-              !jsonData.isEmpty else {
-            throw CloudError.invalidResponse
-        }
+        let (content, reasoning) = try await streamContent(bytes: bytes, onProgress: onProgress)
 
-        let schedule = try JSONDecoder().decode(ScheduleDTO.self, from: jsonData)
+        let candidates = [stripCodeFence(content), firstJSONObject(in: reasoning) ?? ""]
+        var schedule: ScheduleDTO?
+        for candidate in candidates where !candidate.isEmpty {
+            if let data = candidate.data(using: .utf8), let parsed = try? JSONDecoder().decode(ScheduleDTO.self, from: data) {
+                schedule = parsed
+                break
+            }
+        }
+        guard let schedule else { throw CloudError.invalidResponse }
+
         return schedule.lessons
             .enumerated()
             .sorted { ($0.element.index ?? $0.offset) < ($1.element.index ?? $1.offset) }
             .map { ManualLessonEntry(subject: $0.element.subject ?? "", room: $0.element.room ?? "") }
     }
 
+    // Reasoning models stream their chain-of-thought via delta.reasoning, often with
+    // delta.content empty until (or unless) a separate final-answer phase follows it.
     private static func streamContent(
         bytes: URLSession.AsyncBytes,
         onProgress: @escaping @MainActor (Int) -> Void
-    ) async throws -> String {
+    ) async throws -> (content: String, reasoning: String) {
         var fullContent = ""
+        var fullReasoning = ""
         for try await line in bytes.lines {
             guard line.hasPrefix("data: ") else { continue }
             let payload = String(line.dropFirst(6))
@@ -188,12 +195,23 @@ enum CloudScheduleExtractor {
             if let error = chunk.error {
                 throw CloudError.http(-1, error.message)
             }
-            if let delta = chunk.choices?.first?.delta?.content, !delta.isEmpty {
-                fullContent += delta
-                await onProgress(fullContent.count)
+            var changed = false
+            if let text = chunk.choices?.first?.delta?.content, !text.isEmpty {
+                fullContent += text
+                changed = true
             }
+            if let text = chunk.choices?.first?.delta?.reasoning, !text.isEmpty {
+                fullReasoning += text
+                changed = true
+            }
+            if changed { await onProgress(fullContent.count + fullReasoning.count) }
         }
-        return fullContent
+        return (fullContent, fullReasoning)
+    }
+
+    private static func firstJSONObject(in text: String) -> String? {
+        guard let start = text.firstIndex(of: "{"), let end = text.lastIndex(of: "}"), start < end else { return nil }
+        return String(text[start...end])
     }
 
     private static let systemPrompt = """
