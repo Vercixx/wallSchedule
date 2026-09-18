@@ -16,7 +16,10 @@ struct FriendEditorView: View {
 
             Section("Уроки") {
                 ForEach(entries) { entry in
-                    Text("\(entry.subject) (\(entry.room))")
+                    HStack {
+                        TextField("Предмет", text: binding(for: entry.id, \.subject))
+                        TextField("Кабинет", text: binding(for: entry.id, \.room))
+                    }
                 }
                 .onDelete(perform: deleteEntries)
                 .onMove(perform: moveEntries)
@@ -42,6 +45,18 @@ struct FriendEditorView: View {
 
     private var entries: [ManualLessonEntry] {
         friend.lessonsByWeekday[selectedDay.rawValue] ?? []
+    }
+
+    private func binding(for id: UUID, _ keyPath: WritableKeyPath<ManualLessonEntry, String>) -> Binding<String> {
+        Binding(
+            get: { entries.first(where: { $0.id == id })?[keyPath: keyPath] ?? "" },
+            set: { newValue in
+                guard var day = friend.lessonsByWeekday[selectedDay.rawValue],
+                      let index = day.firstIndex(where: { $0.id == id }) else { return }
+                day[index][keyPath: keyPath] = newValue
+                friend.lessonsByWeekday[selectedDay.rawValue] = day
+            }
+        )
     }
 
     private func addEntry() {
